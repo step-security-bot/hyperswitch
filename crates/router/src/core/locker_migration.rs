@@ -140,6 +140,14 @@ pub async fn call_to_locker(
 
         cards_moved += 1;
 
+        if cards_moved % 100 == 0 {
+            let time_taken_for_locker = std::env::var("LOCKER_MIGRATION_WAIT_TIME")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(5);
+            tokio::time::sleep(std::time::Duration::from_secs(time_taken_for_locker)).await;
+        }
+
         logger::info!(
                 "Card migrated for merchant_id: {merchant_id}, customer_id: {customer_id}, payment_method_id: {} ",
                 pm.payment_method_id
