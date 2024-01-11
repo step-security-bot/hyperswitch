@@ -3972,6 +3972,8 @@ pub struct StripeConnectRecipientCreateRequest {
     business_profile_url: Option<String>,
     #[serde(rename = "business_profile[name]")]
     business_profile_name: Option<Secret<String>>,
+    #[serde(rename = "company[name]")]
+    company_name: Option<Secret<String>>,
     #[serde(rename = "company[address][line1]")]
     company_address_line1: Option<Secret<String>>,
     #[serde(rename = "company[address][line2]")]
@@ -4262,7 +4264,8 @@ impl<F> TryFrom<&types::PayoutsRouterData<F>> for StripeConnectRecipientCreateRe
             business_type: vendor_details.business_type,
             business_profile_mcc: vendor_details.business_profile_mcc,
             business_profile_url: vendor_details.business_profile_url,
-            business_profile_name: vendor_details.business_profile_name,
+            business_profile_name: vendor_details.business_profile_name.clone(),
+            company_name: vendor_details.business_profile_name,
             company_address_line1: vendor_details.company_address_line1,
             company_address_line2: vendor_details.company_address_line2,
             company_address_postal_code: vendor_details.company_address_postal_code,
