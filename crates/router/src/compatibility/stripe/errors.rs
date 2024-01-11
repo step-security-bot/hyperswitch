@@ -33,7 +33,7 @@ pub enum StripeErrorCode {
         expected_format: String,
     },
 
-    #[error(error_type = StripeErrorType::InvalidRequestError, code = "IR_06",  message = "Refund amount exceeds the payment amount.")]
+    #[error(error_type = StripeErrorType::InvalidRequestError, code = "IR_06",  message = "The refund amount exceeds the amount captured.")]
     RefundAmountExceedsPaymentAmount { param: String },
 
     #[error(error_type = StripeErrorType::ApiError, code = "payment_intent_authentication_failure", message = "Payment failed while processing with connector. Retry payment.")]
@@ -68,6 +68,9 @@ pub enum StripeErrorCode {
 
     #[error(error_type = StripeErrorType::InvalidRequestError, code = "customer_redacted", message = "Customer has redacted")]
     CustomerRedacted,
+
+    #[error(error_type = StripeErrorType::InvalidRequestError, code = "customer_already_exists", message = "Customer with the given customer_id already exists")]
+    DuplicateCustomer,
 
     #[error(error_type = StripeErrorType::InvalidRequestError, code = "resource_missing", message = "No such refund")]
     RefundNotFound,
@@ -232,8 +235,14 @@ pub enum StripeErrorCode {
     HyperswitchUnprocessableEntity { message: String },
     #[error(error_type = StripeErrorType::InvalidRequestError, code = "", message = "{message}")]
     CurrencyNotSupported { message: String },
+    #[error(error_type = StripeErrorType::HyperswitchError, code = "", message = "Payment Link does not exist in our records")]
+    PaymentLinkNotFound,
     #[error(error_type = StripeErrorType::HyperswitchError, code = "", message = "Resource Busy. Please try again later")]
     LockTimeout,
+    #[error(error_type = StripeErrorType::InvalidRequestError, code = "", message = "Merchant connector account is configured with invalid {config}")]
+    InvalidConnectorConfiguration { config: String },
+    #[error(error_type = StripeErrorType::HyperswitchError, code = "HE_01", message = "Failed to convert currency to minor unit")]
+    CurrencyConversionFailed,
     // [#216]: https://github.com/juspay/hyperswitch/issues/216
     // Implement the remaining stripe error codes
 
@@ -490,6 +499,7 @@ impl From<errors::ApiErrorResponse> for StripeErrorCode {
             errors::ApiErrorResponse::ClientSecretNotGiven
             | errors::ApiErrorResponse::ClientSecretExpired => Self::ClientSecretNotFound,
             errors::ApiErrorResponse::MerchantAccountNotFound => Self::MerchantAccountNotFound,
+            errors::ApiErrorResponse::PaymentLinkNotFound => Self::PaymentLinkNotFound,
             errors::ApiErrorResponse::ResourceIdNotFound => Self::ResourceIdNotFound,
             errors::ApiErrorResponse::MerchantConnectorAccountNotFound { id } => {
                 Self::MerchantConnectorAccountNotFound { id }
@@ -584,6 +594,10 @@ impl From<errors::ApiErrorResponse> for StripeErrorCode {
                 Self::PaymentMethodUnactivated
             }
             errors::ApiErrorResponse::ResourceBusy => Self::PaymentMethodUnactivated,
+            errors::ApiErrorResponse::InvalidConnectorConfiguration { config } => {
+                Self::InvalidConnectorConfiguration { config }
+            }
+            errors::ApiErrorResponse::CurrencyConversionFailed => Self::CurrencyConversionFailed,
         }
     }
 }
@@ -649,9 +663,13 @@ impl actix_web::ResponseError for StripeErrorCode {
             | Self::FileNotAvailable
             | Self::FileProviderNotSupported
             | Self::CurrencyNotSupported { .. }
-            | Self::PaymentMethodUnactivated => StatusCode::BAD_REQUEST,
+            | Self::DuplicateCustomer
+            | Self::PaymentMethodUnactivated
+            | Self::InvalidConnectorConfiguration { .. }
+            | Self::CurrencyConversionFailed => StatusCode::BAD_REQUEST,
             Self::RefundFailed
             | Self::PayoutFailed
+            | Self::PaymentLinkNotFound
             | Self::InternalServerError
             | Self::MandateActive
             | Self::CustomerRedacted
@@ -726,6 +744,7 @@ impl ErrorSwitch<StripeErrorCode> for CustomersErrorResponse {
             Self::InternalServerError => SC::InternalServerError,
             Self::MandateActive => SC::MandateActive,
             Self::CustomerNotFound => SC::CustomerNotFound,
+            Self::CustomerAlreadyExists => SC::DuplicateCustomer,
         }
     }
 }

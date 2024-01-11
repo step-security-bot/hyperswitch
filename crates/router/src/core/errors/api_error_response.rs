@@ -60,7 +60,7 @@ pub enum ApiErrorResponse {
     CustomerRedacted,
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_12", message = "Reached maximum refund attempts")]
     MaximumRefundCount,
-    #[error(error_type = ErrorType::InvalidRequestError, code = "IR_13", message = "Refund amount exceeds the payment amount")]
+    #[error(error_type = ErrorType::InvalidRequestError, code = "IR_13", message = "The refund amount exceeds the amount captured")]
     RefundAmountExceedsPaymentAmount,
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_14", message = "This Payment could not be {current_flow} because it has a {field_name} of {current_value}. The expected state is {states}")]
     PaymentUnexpectedState {
@@ -230,10 +230,16 @@ pub enum ApiErrorResponse {
     IncorrectPaymentMethodConfiguration,
     #[error(error_type = ErrorType::InvalidRequestError, code = "WE_05", message = "Unable to process the webhook body")]
     WebhookUnprocessableEntity,
+    #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Payment Link does not exist in our records")]
+    PaymentLinkNotFound,
     #[error(error_type = ErrorType::InvalidRequestError, code = "WE_05", message = "Merchant Secret set my merchant for webhook source verification is invalid")]
     WebhookInvalidMerchantSecret,
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_19", message = "{message}")]
     CurrencyNotSupported { message: String },
+    #[error(error_type = ErrorType::InvalidRequestError, code = "IR_24", message = "Merchant connector account is configured with invalid {config}")]
+    InvalidConnectorConfiguration { config: String },
+    #[error(error_type = ErrorType::ValidationError, code = "HE_01", message = "Failed to convert currency to minor unit")]
+    CurrencyConversionFailed,
 }
 
 impl PTError for ApiErrorResponse {

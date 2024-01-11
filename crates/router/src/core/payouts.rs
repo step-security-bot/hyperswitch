@@ -43,6 +43,7 @@ pub struct PayoutData {
     pub payout_method_data: Option<payouts::PayoutMethodData>,
     pub merchant_connector_account: Option<payment_helpers::MerchantConnectorAccountType>,
     pub should_bubble_out: bool,
+    pub profile_id: String,
 }
 
 // ********************************************** CORE FLOWS **********************************************
@@ -104,9 +105,7 @@ pub async fn payouts_create_core(
     merchant_account: domain::MerchantAccount,
     key_store: domain::MerchantKeyStore,
     req: payouts::PayoutCreateRequest,
-) -> RouterResponse<payouts::PayoutCreateResponse>
-where
-{
+) -> RouterResponse<payouts::PayoutCreateResponse> {
     // Form connector data
     let connector_data = get_connector_data(
         &state,
@@ -119,8 +118,8 @@ where
     .await?;
 
     // Validate create request
-    let (payout_id, payout_method_data) =
-        validator::validate_create_request(&state, &merchant_account, &req).await?;
+    let (payout_id, payout_method_data, profile_id) =
+        validator::validate_create_request(&state, &merchant_account, &req, &key_store).await?;
 
     // Create DB entries
     let mut payout_data = payout_create_db_entries(
@@ -129,6 +128,7 @@ where
         &key_store,
         &req,
         &payout_id,
+        &profile_id,
         &connector_data.connector_name,
         payout_method_data.as_ref(),
     )
@@ -398,6 +398,7 @@ pub async fn payouts_fulfill_core(
             &payout_attempt.merchant_id,
             &payout_attempt.payout_id,
             Some(&payout_data.payouts.payout_type),
+            &key_store,
         )
         .await?
         .get_required_value("payout_method_data")?,
@@ -446,6 +447,7 @@ pub async fn call_connector_payout(
                 &payout_attempt.merchant_id,
                 &payout_attempt.payout_id,
                 Some(&payouts.payout_type),
+                key_store,
             )
             .await?
             .get_required_value("payout_method_data")?,
@@ -540,18 +542,8 @@ pub async fn create_recipient(
     let customer_details = payout_data.customer_details.to_owned();
     let connector_name = connector_data.connector_name.to_string();
 
-    let profile_id = core_utils::get_profile_id_from_business_details(
-        payout_data.payout_attempt.business_country,
-        payout_data.payout_attempt.business_label.as_ref(),
-        merchant_account,
-        payout_data.payout_attempt.profile_id.as_ref(),
-        &*state.store,
-        false,
-    )
-    .await?;
-
     // Create the connector label using {profile_id}_{connector_name}
-    let connector_label = format!("{profile_id}_{}", connector_name);
+    let connector_label = format!("{}_{}", payout_data.profile_id, connector_name);
 
     let (should_call_connector, _connector_customer_id) =
         helpers::should_call_payout_connector_create_customer(
@@ -1218,6 +1210,7 @@ pub async fn response_handler(
 }
 
 // DB entries
+#[allow(clippy::too_many_arguments)]
 #[cfg(feature = "payouts")]
 pub async fn payout_create_db_entries(
     state: &AppState,
@@ -1225,6 +1218,7 @@ pub async fn payout_create_db_entries(
     key_store: &domain::MerchantKeyStore,
     req: &payouts::PayoutCreateRequest,
     payout_id: &String,
+    profile_id: &String,
     connector_name: &api_enums::PayoutConnectors,
     stored_payout_method_data: Option<&payouts::PayoutMethodData>,
 ) -> RouterResult<PayoutData> {
@@ -1325,8 +1319,7 @@ pub async fn payout_create_db_entries(
     } else {
         storage_enums::PayoutStatus::RequiresPayoutMethodData
     };
-    let _id = core_utils::get_or_generate_uuid("payout_attempt_id", None)?;
-    let payout_attempt_id = format!("{}_{}", merchant_id.to_owned(), payout_id.to_owned());
+    let payout_attempt_id = utils::get_payment_attempt_id(payout_id, 1);
 
     let payout_attempt_req = storage::PayoutAttemptNew::default()
         .set_payout_attempt_id(payout_attempt_id.to_string())
@@ -1341,7 +1334,7 @@ pub async fn payout_create_db_entries(
         .set_payout_token(req.payout_token.to_owned())
         .set_created_at(Some(common_utils::date_time::now()))
         .set_last_modified_at(Some(common_utils::date_time::now()))
-        .set_profile_id(req.profile_id.to_owned())
+        .set_profile_id(profile_id.to_string())
         .set_confirm(req.confirm.unwrap_or(false))
         .to_owned();
     let payout_attempt = db
@@ -1365,6 +1358,7 @@ pub async fn payout_create_db_entries(
             .or(stored_payout_method_data.cloned()),
         merchant_connector_account: None,
         should_bubble_out: false,
+        profile_id: profile_id.to_owned(),
     })
 }
 
@@ -1414,6 +1408,8 @@ pub async fn make_payout_data(
         .await
         .map_or(None, |c| c);
 
+    let profile_id = payout_attempt.profile_id.clone();
+
     Ok(PayoutData {
         billing_address,
         customer_details,
@@ -1422,6 +1418,7 @@ pub async fn make_payout_data(
         payout_method_data: None,
         merchant_connector_account: None,
         should_bubble_out: false,
+        profile_id,
     })
 }
 

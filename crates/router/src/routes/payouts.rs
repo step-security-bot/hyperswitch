@@ -33,7 +33,7 @@ pub async fn payouts_create(
     json_payload: web::Json<payout_types::PayoutCreateRequest>,
 ) -> HttpResponse {
     let flow = Flow::PayoutsCreate;
-    api::server_wrap(
+    Box::pin(api::server_wrap(
         flow,
         state,
         &req,
@@ -41,7 +41,7 @@ pub async fn payouts_create(
         |state, auth, req| payouts_create_core(state, auth.merchant_account, auth.key_store, req),
         &auth::ApiKeyAuth,
         api_locking::LockAction::NotApplicable,
-    )
+    ))
     .await
 }
 /// Payouts - Retrieve
@@ -73,7 +73,7 @@ pub async fn payouts_retrieve(
         merchant_id: query_params.merchant_id.to_owned(),
     };
     let flow = Flow::PayoutsRetrieve;
-    api::server_wrap(
+    Box::pin(api::server_wrap(
         flow,
         state,
         &req,
@@ -81,7 +81,7 @@ pub async fn payouts_retrieve(
         |state, auth, req| payouts_retrieve_core(state, auth.merchant_account, auth.key_store, req),
         &auth::ApiKeyAuth,
         api_locking::LockAction::NotApplicable,
-    )
+    ))
     .await
 }
 /// Payouts - Update
@@ -112,7 +112,7 @@ pub async fn payouts_update(
     let payout_id = path.into_inner();
     let mut payout_update_payload = json_payload.into_inner();
     payout_update_payload.payout_id = Some(payout_id);
-    api::server_wrap(
+    Box::pin(api::server_wrap(
         flow,
         state,
         &req,
@@ -120,7 +120,7 @@ pub async fn payouts_update(
         |state, auth, req| payouts_update_core(state, auth.merchant_account, auth.key_store, req),
         &auth::ApiKeyAuth,
         api_locking::LockAction::NotApplicable,
-    )
+    ))
     .await
 }
 /// Payouts - Cancel
@@ -151,7 +151,7 @@ pub async fn payouts_cancel(
     let mut payload = json_payload.into_inner();
     payload.payout_id = path.into_inner();
 
-    api::server_wrap(
+    Box::pin(api::server_wrap(
         flow,
         state,
         &req,
@@ -159,7 +159,7 @@ pub async fn payouts_cancel(
         |state, auth, req| payouts_cancel_core(state, auth.merchant_account, auth.key_store, req),
         &auth::ApiKeyAuth,
         api_locking::LockAction::NotApplicable,
-    )
+    ))
     .await
 }
 /// Payouts - Fulfill
@@ -190,7 +190,7 @@ pub async fn payouts_fulfill(
     let mut payload = json_payload.into_inner();
     payload.payout_id = path.into_inner();
 
-    api::server_wrap(
+    Box::pin(api::server_wrap(
         flow,
         state,
         &req,
@@ -198,7 +198,7 @@ pub async fn payouts_fulfill(
         |state, auth, req| payouts_fulfill_core(state, auth.merchant_account, auth.key_store, req),
         &auth::ApiKeyAuth,
         api_locking::LockAction::NotApplicable,
-    )
+    ))
     .await
 }
 #[instrument(skip_all, fields(flow = ?Flow::PayoutsAccounts))]

@@ -490,11 +490,143 @@ impl TryFrom<api_models::enums::BankNames> for NuveiBIC {
             api_models::enums::BankNames::TriodosBank => Ok(Self::TriodosBank),
             api_models::enums::BankNames::VanLanschot => Ok(Self::VanLanschotBankiers),
             api_models::enums::BankNames::Moneyou => Ok(Self::Moneyou),
-            _ => Err(errors::ConnectorError::FlowNotSupported {
-                flow: bank.to_string(),
-                connector: "Nuvei".to_string(),
+
+            api_models::enums::BankNames::AmericanExpress
+            | api_models::enums::BankNames::AffinBank
+            | api_models::enums::BankNames::AgroBank
+            | api_models::enums::BankNames::AllianceBank
+            | api_models::enums::BankNames::AmBank
+            | api_models::enums::BankNames::BankOfAmerica
+            | api_models::enums::BankNames::BankIslam
+            | api_models::enums::BankNames::BankMuamalat
+            | api_models::enums::BankNames::BankRakyat
+            | api_models::enums::BankNames::BankSimpananNasional
+            | api_models::enums::BankNames::Barclays
+            | api_models::enums::BankNames::BlikPSP
+            | api_models::enums::BankNames::CapitalOne
+            | api_models::enums::BankNames::Chase
+            | api_models::enums::BankNames::Citi
+            | api_models::enums::BankNames::CimbBank
+            | api_models::enums::BankNames::Discover
+            | api_models::enums::BankNames::NavyFederalCreditUnion
+            | api_models::enums::BankNames::PentagonFederalCreditUnion
+            | api_models::enums::BankNames::SynchronyBank
+            | api_models::enums::BankNames::WellsFargo
+            | api_models::enums::BankNames::Handelsbanken
+            | api_models::enums::BankNames::HongLeongBank
+            | api_models::enums::BankNames::HsbcBank
+            | api_models::enums::BankNames::KuwaitFinanceHouse
+            | api_models::enums::BankNames::Regiobank
+            | api_models::enums::BankNames::Revolut
+            | api_models::enums::BankNames::ArzteUndApothekerBank
+            | api_models::enums::BankNames::AustrianAnadiBankAg
+            | api_models::enums::BankNames::BankAustria
+            | api_models::enums::BankNames::Bank99Ag
+            | api_models::enums::BankNames::BankhausCarlSpangler
+            | api_models::enums::BankNames::BankhausSchelhammerUndSchatteraAg
+            | api_models::enums::BankNames::BankMillennium
+            | api_models::enums::BankNames::BankPEKAOSA
+            | api_models::enums::BankNames::BawagPskAg
+            | api_models::enums::BankNames::BksBankAg
+            | api_models::enums::BankNames::BrullKallmusBankAg
+            | api_models::enums::BankNames::BtvVierLanderBank
+            | api_models::enums::BankNames::CapitalBankGraweGruppeAg
+            | api_models::enums::BankNames::CeskaSporitelna
+            | api_models::enums::BankNames::Dolomitenbank
+            | api_models::enums::BankNames::EasybankAg
+            | api_models::enums::BankNames::EPlatbyVUB
+            | api_models::enums::BankNames::ErsteBankUndSparkassen
+            | api_models::enums::BankNames::FrieslandBank
+            | api_models::enums::BankNames::HypoAlpeadriabankInternationalAg
+            | api_models::enums::BankNames::HypoNoeLbFurNiederosterreichUWien
+            | api_models::enums::BankNames::HypoOberosterreichSalzburgSteiermark
+            | api_models::enums::BankNames::HypoTirolBankAg
+            | api_models::enums::BankNames::HypoVorarlbergBankAg
+            | api_models::enums::BankNames::HypoBankBurgenlandAktiengesellschaft
+            | api_models::enums::BankNames::KomercniBanka
+            | api_models::enums::BankNames::MBank
+            | api_models::enums::BankNames::MarchfelderBank
+            | api_models::enums::BankNames::Maybank
+            | api_models::enums::BankNames::OberbankAg
+            | api_models::enums::BankNames::OsterreichischeArzteUndApothekerbank
+            | api_models::enums::BankNames::OcbcBank
+            | api_models::enums::BankNames::PayWithING
+            | api_models::enums::BankNames::PlaceZIPKO
+            | api_models::enums::BankNames::PlatnoscOnlineKartaPlatnicza
+            | api_models::enums::BankNames::PosojilnicaBankEGen
+            | api_models::enums::BankNames::PostovaBanka
+            | api_models::enums::BankNames::PublicBank
+            | api_models::enums::BankNames::RaiffeisenBankengruppeOsterreich
+            | api_models::enums::BankNames::RhbBank
+            | api_models::enums::BankNames::SchelhammerCapitalBankAg
+            | api_models::enums::BankNames::StandardCharteredBank
+            | api_models::enums::BankNames::SchoellerbankAg
+            | api_models::enums::BankNames::SpardaBankWien
+            | api_models::enums::BankNames::SporoPay
+            | api_models::enums::BankNames::SantanderPrzelew24
+            | api_models::enums::BankNames::TatraPay
+            | api_models::enums::BankNames::Viamo
+            | api_models::enums::BankNames::VolksbankGruppe
+            | api_models::enums::BankNames::VolkskreditbankAg
+            | api_models::enums::BankNames::VrBankBraunau
+            | api_models::enums::BankNames::UobBank
+            | api_models::enums::BankNames::PayWithAliorBank
+            | api_models::enums::BankNames::BankiSpoldzielcze
+            | api_models::enums::BankNames::PayWithInteligo
+            | api_models::enums::BankNames::BNPParibasPoland
+            | api_models::enums::BankNames::BankNowySA
+            | api_models::enums::BankNames::CreditAgricole
+            | api_models::enums::BankNames::PayWithBOS
+            | api_models::enums::BankNames::PayWithCitiHandlowy
+            | api_models::enums::BankNames::PayWithPlusBank
+            | api_models::enums::BankNames::ToyotaBank
+            | api_models::enums::BankNames::VeloBank
+            | api_models::enums::BankNames::ETransferPocztowy24
+            | api_models::enums::BankNames::PlusBank
+            | api_models::enums::BankNames::EtransferPocztowy24
+            | api_models::enums::BankNames::BankiSpbdzielcze
+            | api_models::enums::BankNames::BankNowyBfgSa
+            | api_models::enums::BankNames::GetinBank
+            | api_models::enums::BankNames::Blik
+            | api_models::enums::BankNames::NoblePay
+            | api_models::enums::BankNames::IdeaBank
+            | api_models::enums::BankNames::EnveloBank
+            | api_models::enums::BankNames::NestPrzelew
+            | api_models::enums::BankNames::MbankMtransfer
+            | api_models::enums::BankNames::Inteligo
+            | api_models::enums::BankNames::PbacZIpko
+            | api_models::enums::BankNames::BnpParibas
+            | api_models::enums::BankNames::BankPekaoSa
+            | api_models::enums::BankNames::VolkswagenBank
+            | api_models::enums::BankNames::AliorBank
+            | api_models::enums::BankNames::Boz
+            | api_models::enums::BankNames::BangkokBank
+            | api_models::enums::BankNames::KrungsriBank
+            | api_models::enums::BankNames::KrungThaiBank
+            | api_models::enums::BankNames::TheSiamCommercialBank
+            | api_models::enums::BankNames::KasikornBank
+            | api_models::enums::BankNames::OpenBankSuccess
+            | api_models::enums::BankNames::OpenBankFailure
+            | api_models::enums::BankNames::OpenBankCancelled
+            | api_models::enums::BankNames::Aib
+            | api_models::enums::BankNames::BankOfScotland
+            | api_models::enums::BankNames::DanskeBank
+            | api_models::enums::BankNames::FirstDirect
+            | api_models::enums::BankNames::FirstTrust
+            | api_models::enums::BankNames::Halifax
+            | api_models::enums::BankNames::Lloyds
+            | api_models::enums::BankNames::Monzo
+            | api_models::enums::BankNames::NatWest
+            | api_models::enums::BankNames::NationwideBank
+            | api_models::enums::BankNames::RoyalBankOfScotland
+            | api_models::enums::BankNames::Starling
+            | api_models::enums::BankNames::TsbBank
+            | api_models::enums::BankNames::TescoBank
+            | api_models::enums::BankNames::UlsterBank => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Nuvei"),
+                ))?
             }
-            .into()),
         }
     }
 }
@@ -559,10 +691,9 @@ impl<F>
                     bank_name.map(NuveiBIC::try_from).transpose()?,
                 )
             }
-            _ => Err(errors::ConnectorError::NotSupported {
-                message: "Bank Redirect".to_string(),
-                connector: "Nuvei",
-            })?,
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Nuvei"),
+            ))?,
         };
         Ok(Self {
             payment_option: PaymentOption {
@@ -725,8 +856,9 @@ impl<F>
             | payments::PaymentMethodData::Reward
             | payments::PaymentMethodData::Upi(_)
             | payments::PaymentMethodData::Voucher(_)
-            | api_models::payments::PaymentMethodData::CardRedirect(_)
-            | payments::PaymentMethodData::GiftCard(_) => {
+            | payments::PaymentMethodData::CardRedirect(_)
+            | payments::PaymentMethodData::GiftCard(_)
+            | payments::PaymentMethodData::CardToken(_) => {
                 Err(errors::ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("nuvei"),
                 )
@@ -868,7 +1000,7 @@ impl From<NuveiCardDetails> for PaymentOption {
         Self {
             card: Some(Card {
                 card_number: Some(card.card_number),
-                card_holder_name: Some(card.card_holder_name),
+                card_holder_name: card.card_holder_name,
                 expiration_month: Some(card.card_exp_month),
                 expiration_year: Some(card.card_exp_year),
                 three_d: card_details.three_d,
@@ -906,6 +1038,7 @@ impl TryFrom<(&types::PaymentsCompleteAuthorizeRouterData, String)> for NuveiPay
             | Some(api::PaymentMethodData::CardRedirect(..))
             | Some(api::PaymentMethodData::Reward)
             | Some(api::PaymentMethodData::Upi(..))
+            | Some(api::PaymentMethodData::CardToken(..))
             | None => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("nuvei"),
             )),
@@ -1319,6 +1452,7 @@ where
                     },
                     network_txn_id: None,
                     connector_response_reference_id: response.order_id,
+                    incremental_authorization_allowed: None,
                 })
             },
             ..item.data
@@ -1445,6 +1579,8 @@ fn get_error_response<T>(
             .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
         reason: None,
         status_code: http_code,
+        attempt_status: None,
+        connector_transaction_id: None,
     })
 }
 

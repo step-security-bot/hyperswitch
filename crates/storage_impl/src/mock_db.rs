@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use data_models::{
     errors::StorageError,
-    payments::{payment_attempt::PaymentAttempt, payment_intent::PaymentIntent},
+    payments::{payment_attempt::PaymentAttempt, PaymentIntent},
 };
 use diesel_models::{self as store};
 use error_stack::ResultExt;
@@ -27,7 +27,6 @@ pub struct MockDb {
     pub customers: Arc<Mutex<Vec<store::Customer>>>,
     pub refunds: Arc<Mutex<Vec<store::Refund>>>,
     pub processes: Arc<Mutex<Vec<store::ProcessTracker>>>,
-    pub connector_response: Arc<Mutex<Vec<store::ConnectorResponse>>>,
     pub redis: Arc<RedisStore>,
     pub api_keys: Arc<Mutex<Vec<store::ApiKey>>>,
     pub ephemeral_keys: Arc<Mutex<Vec<store::EphemeralKey>>>,
@@ -40,6 +39,12 @@ pub struct MockDb {
     pub merchant_key_store: Arc<Mutex<Vec<crate::store::merchant_key_store::MerchantKeyStore>>>,
     pub business_profiles: Arc<Mutex<Vec<crate::store::business_profile::BusinessProfile>>>,
     pub reverse_lookups: Arc<Mutex<Vec<store::ReverseLookup>>>,
+    pub payment_link: Arc<Mutex<Vec<store::payment_link::PaymentLink>>>,
+    pub organizations: Arc<Mutex<Vec<store::organization::Organization>>>,
+    pub users: Arc<Mutex<Vec<store::user::User>>>,
+    pub user_roles: Arc<Mutex<Vec<store::user_role::UserRole>>>,
+    pub authorizations: Arc<Mutex<Vec<store::authorization::Authorization>>>,
+    pub dashboard_metadata: Arc<Mutex<Vec<store::user::dashboard_metadata::DashboardMetadata>>>,
 }
 
 impl MockDb {
@@ -55,7 +60,6 @@ impl MockDb {
             customers: Default::default(),
             refunds: Default::default(),
             processes: Default::default(),
-            connector_response: Default::default(),
             redis: Arc::new(
                 RedisStore::new(redis)
                     .await
@@ -72,6 +76,12 @@ impl MockDb {
             merchant_key_store: Default::default(),
             business_profiles: Default::default(),
             reverse_lookups: Default::default(),
+            payment_link: Default::default(),
+            organizations: Default::default(),
+            users: Default::default(),
+            user_roles: Default::default(),
+            authorizations: Default::default(),
+            dashboard_metadata: Default::default(),
         })
     }
 }

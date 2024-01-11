@@ -8,10 +8,18 @@ use crate::{disputes, enums as api_enums, mandates, payments, refunds};
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum IncomingWebhookEvent {
+    /// Authorization + Capture success
     PaymentIntentFailure,
+    /// Authorization + Capture failure
     PaymentIntentSuccess,
     PaymentIntentProcessing,
     PaymentIntentPartiallyFunded,
+    PaymentIntentCancelled,
+    PaymentIntentCancelFailure,
+    PaymentIntentAuthorizationSuccess,
+    PaymentIntentAuthorizationFailure,
+    PaymentIntentCaptureSuccess,
+    PaymentIntentCaptureFailure,
     PaymentActionRequired,
     EventNotSupported,
     SourceChargeable,
@@ -84,7 +92,13 @@ impl From<IncomingWebhookEvent> for WebhookFlow {
             | IncomingWebhookEvent::PaymentIntentSuccess
             | IncomingWebhookEvent::PaymentIntentProcessing
             | IncomingWebhookEvent::PaymentActionRequired
-            | IncomingWebhookEvent::PaymentIntentPartiallyFunded => Self::Payment,
+            | IncomingWebhookEvent::PaymentIntentPartiallyFunded
+            | IncomingWebhookEvent::PaymentIntentCancelled
+            | IncomingWebhookEvent::PaymentIntentCancelFailure
+            | IncomingWebhookEvent::PaymentIntentAuthorizationSuccess
+            | IncomingWebhookEvent::PaymentIntentAuthorizationFailure
+            | IncomingWebhookEvent::PaymentIntentCaptureSuccess
+            | IncomingWebhookEvent::PaymentIntentCaptureFailure => Self::Payment,
             IncomingWebhookEvent::EventNotSupported => Self::ReturnResponse,
             IncomingWebhookEvent::RefundSuccess | IncomingWebhookEvent::RefundFailure => {
                 Self::Refund

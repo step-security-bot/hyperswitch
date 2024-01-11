@@ -2,6 +2,7 @@ pub mod transformers;
 
 use std::{collections::HashMap, fmt::Debug, ops::Deref};
 
+use common_utils::request::RequestContent;
 use diesel_models::enums;
 use error_stack::{IntoReport, ResultExt};
 use masking::PeekInterface;
@@ -28,7 +29,7 @@ use crate::{
         self,
         api::{self, ConnectorCommon, ConnectorCommonExt},
     },
-    utils::{self, crypto, ByteSliceExt, BytesExt, OptionExt},
+    utils::{crypto, ByteSliceExt, BytesExt, OptionExt},
 };
 
 #[derive(Debug, Clone)]
@@ -102,6 +103,8 @@ impl ConnectorCommon for Stripe {
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
             reason: response.error.message,
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id)
         })
     }
 }
@@ -190,15 +193,11 @@ impl
     fn get_request_body(
         &self,
         req: &types::PaymentsPreProcessingRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let req = stripe::StripeCreditTransferSourceRequest::try_from(req)?;
-        let pre_processing_request = types::RequestBody::log_and_get_request_body(
-            &req,
-            utils::Encode::<stripe::StripeCreditTransferSourceRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::StripeCreditTransferSourceRequest::try_from(req)?;
 
-        Ok(Some(pre_processing_request))
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -216,8 +215,8 @@ impl
                 .headers(types::PaymentsPreProcessingType::get_headers(
                     self, req, connectors,
                 )?)
-                .body(types::PaymentsPreProcessingType::get_request_body(
-                    self, req,
+                .set_body(types::PaymentsPreProcessingType::get_request_body(
+                    self, req, connectors,
                 )?)
                 .build(),
         ))
@@ -262,7 +261,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -307,14 +316,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::ConnectorCustomerRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let connector_request = stripe::CustomerRequest::try_from(req)?;
-        let stripe_req = types::RequestBody::log_and_get_request_body(
-            &connector_request,
-            utils::Encode::<stripe::CustomerRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::CustomerRequest::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -332,7 +337,9 @@ impl
                 .headers(types::ConnectorCustomerType::get_headers(
                     self, req, connectors,
                 )?)
-                .body(types::ConnectorCustomerType::get_request_body(self, req)?)
+                .set_body(types::ConnectorCustomerType::get_request_body(
+                    self, req, connectors,
+                )?)
                 .build(),
         ))
     }
@@ -380,7 +387,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -425,14 +442,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::TokenizationRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let connector_request = stripe::TokenRequest::try_from(req)?;
-        let stripe_req = types::RequestBody::log_and_get_request_body(
-            &connector_request,
-            utils::Encode::<stripe::TokenRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::TokenRequest::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -446,7 +459,9 @@ impl
                 .url(&types::TokenizationType::get_url(self, req, connectors)?)
                 .attach_default_headers()
                 .headers(types::TokenizationType::get_headers(self, req, connectors)?)
-                .body(types::TokenizationType::get_request_body(self, req)?)
+                .set_body(types::TokenizationType::get_request_body(
+                    self, req, connectors,
+                )?)
                 .build(),
         ))
     }
@@ -494,7 +509,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -545,14 +570,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::PaymentsCaptureRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let connector_request = stripe::CaptureRequest::try_from(req)?;
-        let stripe_req = types::RequestBody::log_and_get_request_body(
-            &connector_request,
-            utils::Encode::<stripe::CaptureRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::CaptureRequest::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -568,7 +589,9 @@ impl
                 .headers(types::PaymentsCaptureType::get_headers(
                     self, req, connectors,
                 )?)
-                .body(types::PaymentsCaptureType::get_request_body(self, req)?)
+                .set_body(types::PaymentsCaptureType::get_request_body(
+                    self, req, connectors,
+                )?)
                 .build(),
         ))
     }
@@ -616,7 +639,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -681,7 +714,6 @@ impl
                 .url(&types::PaymentsSyncType::get_url(self, req, connectors)?)
                 .attach_default_headers()
                 .headers(types::PaymentsSyncType::get_headers(self, req, connectors)?)
-                .body(types::PaymentsSyncType::get_request_body(self, req)?)
                 .build(),
         ))
     }
@@ -748,7 +780,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -811,19 +853,15 @@ impl
     fn get_request_body(
         &self,
         req: &types::PaymentsAuthorizeRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
         match &req.request.payment_method_data {
             api_models::payments::PaymentMethodData::BankTransfer(bank_transfer_data) => {
                 stripe::get_bank_transfer_request_data(req, bank_transfer_data.deref())
             }
             _ => {
-                let req = stripe::PaymentIntentRequest::try_from(req)?;
-                let request = types::RequestBody::log_and_get_request_body(
-                    &req,
-                    utils::Encode::<stripe::PaymentIntentRequest>::url_encode,
-                )
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-                Ok(Some(request))
+                let connector_req = stripe::PaymentIntentRequest::try_from(req)?;
+                Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
             }
         }
     }
@@ -843,7 +881,9 @@ impl
                 .headers(types::PaymentsAuthorizeType::get_headers(
                     self, req, connectors,
                 )?)
-                .body(types::PaymentsAuthorizeType::get_request_body(self, req)?)
+                .set_body(types::PaymentsAuthorizeType::get_request_body(
+                    self, req, connectors,
+                )?)
                 .build(),
         ))
     }
@@ -894,7 +934,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -942,14 +992,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::PaymentsCancelRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let connector_request = stripe::CancelRequest::try_from(req)?;
-        let stripe_req = types::RequestBody::log_and_get_request_body(
-            &connector_request,
-            utils::Encode::<stripe::CancelRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::CancelRequest::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -962,7 +1008,9 @@ impl
             .url(&types::PaymentsVoidType::get_url(self, req, connectors)?)
             .attach_default_headers()
             .headers(types::PaymentsVoidType::get_headers(self, req, connectors)?)
-            .body(types::PaymentsVoidType::get_request_body(self, req)?)
+            .set_body(types::PaymentsVoidType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
         Ok(Some(request))
     }
@@ -1005,7 +1053,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1067,14 +1125,10 @@ impl
             types::SetupMandateRequestData,
             types::PaymentsResponseData,
         >,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let req = stripe::SetupIntentRequest::try_from(req)?;
-        let stripe_req = types::RequestBody::log_and_get_request_body(
-            &req,
-            utils::Encode::<stripe::SetupIntentRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::SetupIntentRequest::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -1092,7 +1146,7 @@ impl
                 .url(&Verify::get_url(self, req, connectors)?)
                 .attach_default_headers()
                 .headers(Verify::get_headers(self, req, connectors)?)
-                .body(Verify::get_request_body(self, req)?)
+                .set_body(Verify::get_request_body(self, req, connectors)?)
                 .build(),
         ))
     }
@@ -1151,7 +1205,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1194,14 +1258,10 @@ impl services::ConnectorIntegration<api::Execute, types::RefundsData, types::Ref
     fn get_request_body(
         &self,
         req: &types::RefundsRouterData<api::Execute>,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let connector_request = stripe::RefundRequest::try_from(req)?;
-        let stripe_req = types::RequestBody::log_and_get_request_body(
-            &connector_request,
-            utils::Encode::<stripe::RefundRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::RefundRequest::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -1216,7 +1276,9 @@ impl services::ConnectorIntegration<api::Execute, types::RefundsData, types::Ref
             .headers(types::RefundExecuteType::get_headers(
                 self, req, connectors,
             )?)
-            .body(types::RefundExecuteType::get_request_body(self, req)?)
+            .set_body(types::RefundExecuteType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
         Ok(Some(request))
     }
@@ -1260,7 +1322,17 @@ impl services::ConnectorIntegration<api::Execute, types::RefundsData, types::Ref
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1308,7 +1380,6 @@ impl services::ConnectorIntegration<api::RSync, types::RefundsData, types::Refun
                 .url(&types::RefundSyncType::get_url(self, req, connectors)?)
                 .attach_default_headers()
                 .headers(types::RefundSyncType::get_headers(self, req, connectors)?)
-                .body(types::RefundSyncType::get_request_body(self, req)?)
                 .build(),
         ))
     }
@@ -1355,7 +1426,17 @@ impl services::ConnectorIntegration<api::RSync, types::RefundsData, types::Refun
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1424,12 +1505,13 @@ impl
         ))
     }
 
-    fn get_request_form_data(
+    fn get_request_body(
         &self,
         req: &types::UploadFileRouterData,
-    ) -> CustomResult<Option<reqwest::multipart::Form>, errors::ConnectorError> {
-        let stripe_req = transformers::construct_file_upload_request(req.clone())?;
-        Ok(Some(stripe_req))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = transformers::construct_file_upload_request(req.clone())?;
+        Ok(RequestContent::FormData(connector_req))
     }
 
     fn build_request(
@@ -1443,8 +1525,9 @@ impl
                 .url(&types::UploadFileType::get_url(self, req, connectors)?)
                 .attach_default_headers()
                 .headers(types::UploadFileType::get_headers(self, req, connectors)?)
-                .form_data(types::UploadFileType::get_request_form_data(self, req)?)
-                .content_type(services::request::ContentType::FormData)
+                .set_body(types::UploadFileType::get_request_body(
+                    self, req, connectors,
+                )?)
                 .build(),
         ))
     }
@@ -1491,7 +1574,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1585,7 +1678,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1635,14 +1738,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::SubmitEvidenceRouterData,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
-        let stripe_req = stripe::Evidence::try_from(req)?;
-        let stripe_req_string = types::RequestBody::log_and_get_request_body(
-            &stripe_req,
-            utils::Encode::<stripe::Evidence>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_req_string))
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        let connector_req = stripe::Evidence::try_from(req)?;
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -1657,7 +1756,9 @@ impl
             .headers(types::SubmitEvidenceType::get_headers(
                 self, req, connectors,
             )?)
-            .body(types::SubmitEvidenceType::get_request_body(self, req)?)
+            .set_body(types::SubmitEvidenceType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
         Ok(Some(request))
     }
@@ -1702,7 +1803,17 @@ impl
                 .error
                 .code
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: response.error.message,
+            reason: response.error.message.map(|message| {
+                response
+                    .error
+                    .decline_code
+                    .map(|decline_code| {
+                        format!("message - {}, decline_code - {}", message, decline_code)
+                    })
+                    .unwrap_or(message)
+            }),
+            attempt_status: None,
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }
@@ -1795,10 +1906,15 @@ impl api::IncomingWebhook for Stripe {
 
         Ok(match details.event_data.event_object.object {
             stripe::WebhookEventObjectType::PaymentIntent => {
-                match details.event_data.event_object.metadata {
+                match details
+                    .event_data
+                    .event_object
+                    .metadata
+                    .and_then(|meta_data| meta_data.order_id)
+                {
                     // if order_id is present
-                    Some(meta_data) => api_models::webhooks::ObjectReferenceId::PaymentId(
-                        api_models::payments::PaymentIdType::PaymentAttemptId(meta_data.order_id),
+                    Some(order_id) => api_models::webhooks::ObjectReferenceId::PaymentId(
+                        api_models::payments::PaymentIdType::PaymentAttemptId(order_id),
                     ),
                     // else used connector_transaction_id
                     None => api_models::webhooks::ObjectReferenceId::PaymentId(
@@ -1809,10 +1925,15 @@ impl api::IncomingWebhook for Stripe {
                 }
             }
             stripe::WebhookEventObjectType::Charge => {
-                match details.event_data.event_object.metadata {
+                match details
+                    .event_data
+                    .event_object
+                    .metadata
+                    .and_then(|meta_data| meta_data.order_id)
+                {
                     // if order_id is present
-                    Some(meta_data) => api_models::webhooks::ObjectReferenceId::PaymentId(
-                        api_models::payments::PaymentIdType::PaymentAttemptId(meta_data.order_id),
+                    Some(order_id) => api_models::webhooks::ObjectReferenceId::PaymentId(
+                        api_models::payments::PaymentIdType::PaymentAttemptId(order_id),
                     ),
                     // else used connector_transaction_id
                     None => api_models::webhooks::ObjectReferenceId::PaymentId(
@@ -1845,14 +1966,25 @@ impl api::IncomingWebhook for Stripe {
                 )
             }
             stripe::WebhookEventObjectType::Refund => {
-                match details.event_data.event_object.metadata {
+                match details
+                    .event_data
+                    .event_object
+                    .metadata
+                    .clone()
+                    .and_then(|meta_data| meta_data.order_id)
+                {
                     // if meta_data is present
-                    Some(meta_data) => {
+                    Some(order_id) => {
                         // Issue: 2076
-                        match meta_data.is_refund_id_as_reference {
+                        match details
+                            .event_data
+                            .event_object
+                            .metadata
+                            .and_then(|meta_data| meta_data.is_refund_id_as_reference)
+                        {
                             // if the order_id is refund_id
                             Some(_) => api_models::webhooks::ObjectReferenceId::RefundId(
-                                api_models::webhooks::RefundIdType::RefundId(meta_data.order_id),
+                                api_models::webhooks::RefundIdType::RefundId(order_id),
                             ),
                             // if the order_id is payment_id
                             // since payment_id was being passed before the deployment of this pr
@@ -1889,6 +2021,12 @@ impl api::IncomingWebhook for Stripe {
             }
             stripe::WebhookEventType::PaymentIntentSucceed => {
                 api::IncomingWebhookEvent::PaymentIntentSuccess
+            }
+            stripe::WebhookEventType::PaymentIntentCanceled => {
+                api::IncomingWebhookEvent::PaymentIntentCancelled
+            }
+            stripe::WebhookEventType::PaymentIntentAmountCapturableUpdated => {
+                api::IncomingWebhookEvent::PaymentIntentAuthorizationSuccess
             }
             stripe::WebhookEventType::ChargeSucceeded => {
                 if let Some(stripe::WebhookPaymentMethodDetails {
@@ -1944,10 +2082,8 @@ impl api::IncomingWebhook for Stripe {
             | stripe::WebhookEventType::ChargePending
             | stripe::WebhookEventType::ChargeUpdated
             | stripe::WebhookEventType::ChargeRefunded
-            | stripe::WebhookEventType::PaymentIntentCanceled
             | stripe::WebhookEventType::PaymentIntentCreated
             | stripe::WebhookEventType::PaymentIntentProcessing
-            | stripe::WebhookEventType::PaymentIntentAmountCapturableUpdated
             | stripe::WebhookEventType::SourceTransactionCreated => {
                 api::IncomingWebhookEvent::EventNotSupported
             }
@@ -1957,13 +2093,13 @@ impl api::IncomingWebhook for Stripe {
     fn get_webhook_resource_object(
         &self,
         request: &api::IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<serde_json::Value, errors::ConnectorError> {
+    ) -> CustomResult<Box<dyn masking::ErasedMaskSerialize>, errors::ConnectorError> {
         let details: stripe::WebhookEventObjectResource = request
             .body
             .parse_struct("WebhookEventObjectResource")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
-        Ok(details.data.object)
+        Ok(Box::new(details.data.object))
     }
     fn get_dispute_details(
         &self,
@@ -2008,34 +2144,15 @@ impl api::IncomingWebhook for Stripe {
 impl services::ConnectorRedirectResponse for Stripe {
     fn get_flow_type(
         &self,
-        query_params: &str,
+        _query_params: &str,
         _json_payload: Option<serde_json::Value>,
-        _action: services::PaymentAction,
+        action: services::PaymentAction,
     ) -> CustomResult<crate::core::payments::CallConnectorAction, errors::ConnectorError> {
-        let query =
-            serde_urlencoded::from_str::<transformers::StripeRedirectResponse>(query_params)
-                .into_report()
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        crate::logger::debug!(stripe_redirect_response=?query);
-
-        Ok(query
-            .redirect_status
-            .map_or(
-                payments::CallConnectorAction::Trigger,
-                |status| match status {
-                    transformers::StripePaymentStatus::Failed
-                    | transformers::StripePaymentStatus::Pending
-                    | transformers::StripePaymentStatus::Succeeded => {
-                        payments::CallConnectorAction::Trigger
-                    }
-                    _ => payments::CallConnectorAction::StatusUpdate {
-                        status: enums::AttemptStatus::from(status),
-                        error_code: None,
-                        error_message: None,
-                    },
-                },
-            ))
+        match action {
+            services::PaymentAction::PSync | services::PaymentAction::CompleteAuthorize => {
+                Ok(payments::CallConnectorAction::Trigger)
+            }
+        }
     }
 }
 
@@ -2082,14 +2199,10 @@ impl services::ConnectorIntegration<api::PoCancel, types::PayoutsData, types::Pa
     fn get_request_body(
         &self,
         req: &types::RouterData<api::PoCancel, types::PayoutsData, types::PayoutsResponseData>,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
         let connector_req = stripe::StripeConnectReversalRequest::try_from(req)?;
-        let stripe_connect_req = types::RequestBody::log_and_get_request_body(
-            &connector_req,
-            utils::Encode::<stripe::StripeConnectReversalRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_connect_req))
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -2102,7 +2215,9 @@ impl services::ConnectorIntegration<api::PoCancel, types::PayoutsData, types::Pa
             .url(&types::PayoutCancelType::get_url(self, req, connectors)?)
             .attach_default_headers()
             .headers(types::PayoutCancelType::get_headers(self, req, connectors)?)
-            .body(types::PayoutCancelType::get_request_body(self, req)?)
+            .set_body(types::PayoutCancelType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
 
         Ok(Some(request))
@@ -2160,14 +2275,10 @@ impl services::ConnectorIntegration<api::PoCreate, types::PayoutsData, types::Pa
     fn get_request_body(
         &self,
         req: &types::PayoutsRouterData<api::PoCreate>,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
         let connector_req = stripe::StripeConnectPayoutCreateRequest::try_from(req)?;
-        let stripe_connect_req = types::RequestBody::log_and_get_request_body(
-            &connector_req,
-            utils::Encode::<stripe::StripeConnectPayoutCreateRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_connect_req))
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -2180,7 +2291,9 @@ impl services::ConnectorIntegration<api::PoCreate, types::PayoutsData, types::Pa
             .url(&types::PayoutCreateType::get_url(self, req, connectors)?)
             .attach_default_headers()
             .headers(types::PayoutCreateType::get_headers(self, req, connectors)?)
-            .body(types::PayoutCreateType::get_request_body(self, req)?)
+            .set_body(types::PayoutCreateType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
 
         Ok(Some(request))
@@ -2245,14 +2358,10 @@ impl services::ConnectorIntegration<api::PoFulfill, types::PayoutsData, types::P
     fn get_request_body(
         &self,
         req: &types::PayoutsRouterData<api::PoFulfill>,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
         let connector_req = stripe::StripeConnectPayoutFulfillRequest::try_from(req)?;
-        let stripe_connect_req = types::RequestBody::log_and_get_request_body(
-            &connector_req,
-            utils::Encode::<stripe::StripeConnectPayoutFulfillRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(stripe_connect_req))
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -2267,7 +2376,9 @@ impl services::ConnectorIntegration<api::PoFulfill, types::PayoutsData, types::P
             .headers(types::PayoutFulfillType::get_headers(
                 self, req, connectors,
             )?)
-            .body(types::PayoutFulfillType::get_request_body(self, req)?)
+            .set_body(types::PayoutFulfillType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
 
         Ok(Some(request))
@@ -2327,14 +2438,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::PayoutsRouterData<api::PoRecipient>,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
         let connector_req = stripe::StripeConnectRecipientCreateRequest::try_from(req)?;
-        let wise_req = types::RequestBody::log_and_get_request_body(
-            &connector_req,
-            utils::Encode::<stripe::StripeConnectRecipientCreateRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(wise_req))
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -2349,7 +2456,9 @@ impl
             .headers(types::PayoutRecipientType::get_headers(
                 self, req, connectors,
             )?)
-            .body(types::PayoutRecipientType::get_request_body(self, req)?)
+            .set_body(types::PayoutRecipientType::get_request_body(
+                self, req, connectors,
+            )?)
             .build();
 
         Ok(Some(request))
@@ -2415,14 +2524,10 @@ impl
     fn get_request_body(
         &self,
         req: &types::PayoutsRouterData<api::PoRecipientAccount>,
-    ) -> CustomResult<Option<types::RequestBody>, errors::ConnectorError> {
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<RequestContent, errors::ConnectorError> {
         let connector_req = stripe::StripeConnectRecipientAccountCreateRequest::try_from(req)?;
-        let wise_req = types::RequestBody::log_and_get_request_body(
-            &connector_req,
-            utils::Encode::<stripe::StripeConnectRecipientAccountCreateRequest>::url_encode,
-        )
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Some(wise_req))
+        Ok(RequestContent::FormUrlEncoded(Box::new(connector_req)))
     }
 
     fn build_request(
@@ -2439,8 +2544,8 @@ impl
             .headers(types::PayoutRecipientAccountType::get_headers(
                 self, req, connectors,
             )?)
-            .body(types::PayoutRecipientAccountType::get_request_body(
-                self, req,
+            .set_body(types::PayoutRecipientAccountType::get_request_body(
+                self, req, connectors,
             )?)
             .build();
 

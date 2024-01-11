@@ -17,6 +17,12 @@ pub struct MandateRevokedResponse {
     /// The status for mandates
     #[schema(value_type = MandateStatus)]
     pub status: api_enums::MandateStatus,
+    /// If there was an error while calling the connectors the code is received here
+    #[schema(example = "E0001")]
+    pub error_code: Option<String>,
+    /// If there was an error while calling the connector the error message is received here
+    #[schema(example = "Failed while verifying the card")]
+    pub error_message: Option<String>,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize, ToSchema, Clone)]
@@ -62,7 +68,7 @@ pub struct MandateCardDetails {
     pub card_fingerprint: Option<Secret<String>>,
 }
 
-#[derive(Clone, Debug, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Deserialize, ToSchema, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct MandateListConstraints {
     /// limit on the number of objects to return
