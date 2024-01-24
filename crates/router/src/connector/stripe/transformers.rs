@@ -2026,7 +2026,7 @@ impl TryFrom<&types::ConnectorCustomerRouterData> for CustomerRequest {
             description: item.request.description.to_owned(),
             email: item.request.email.to_owned(),
             phone: item.request.phone.to_owned(),
-            name: item.request.name.to_owned().map(Secret::new),
+            name: item.request.name.to_owned(),
             source: item.request.preprocessing_id.to_owned(),
         })
     }
@@ -4335,7 +4335,12 @@ impl<F> TryFrom<&types::PayoutsRouterData<F>> for StripeConnectRecipientAccountC
                 api_models::payouts::Bank::Ach(bank_details) => {
                     Ok(Self::Bank(RecipientBankAccountRequest {
                         external_account_object: "bank_account".to_string(),
-                        external_account_country: bank_details.bank_country_code,
+                        external_account_country: bank_details
+                            .bank_country_code
+                            .get_required_value("bank_country_code")
+                            .change_context(errors::ConnectorError::MissingRequiredField {
+                                field_name: "bank_country_code",
+                            })?,
                         external_account_currency: request.destination_currency.to_owned(),
                         external_account_account_holder_name: customer_name,
                         external_account_account_holder_type: payout_vendor_details

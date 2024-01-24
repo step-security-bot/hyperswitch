@@ -104,7 +104,7 @@ impl ConnectorCommon for Stripe {
                 .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
             reason: response.error.message,
             attempt_status: None,
-            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id)
+            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
         })
     }
 }

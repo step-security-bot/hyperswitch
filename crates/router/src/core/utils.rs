@@ -1,9 +1,9 @@
 use std::{marker::PhantomData, str::FromStr};
 
 use api_models::enums::{DisputeStage, DisputeStatus};
-use common_enums::RequestIncrementalAuthorization;
 #[cfg(feature = "payouts")]
 use api_models::payouts::PayoutVendorAccountDetails;
+use common_enums::RequestIncrementalAuthorization;
 #[cfg(feature = "payouts")]
 use common_utils::{crypto::Encryptable, pii::Email};
 use common_utils::{errors::CustomResult, ext_traits::AsyncExt};
