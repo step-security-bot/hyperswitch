@@ -594,7 +594,7 @@ impl
                 Some(enums::CaptureMethod::Automatic) | None
             )),
             payment_solution: Some("001".to_string()),
-            commerce_indicator: apple_pay_data.payment_data.eci_indicator.clone(),
+            commerce_indicator: Some("aesk".to_string()),
         };
         let client_reference_information = ClientReferenceInformation::from(item);
         let expiration_month = apple_pay_data.get_expiry_month()?;
