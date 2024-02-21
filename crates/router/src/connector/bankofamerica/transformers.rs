@@ -98,7 +98,7 @@ pub struct BankOfAmericaPaymentsRequest {
 pub struct ProcessingInformation {
     capture: Option<bool>,
     payment_solution: Option<String>,
-    commerce_indicator: String,
+    commerce_indicator: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -344,7 +344,7 @@ impl
                 Some(enums::CaptureMethod::Automatic) | None
             )),
             payment_solution: solution.map(String::from),
-            commerce_indicator: String::from("internet"),
+            commerce_indicator: Some(String::from("internet")),
         }
     }
 }
@@ -369,10 +369,12 @@ impl
                 Some(enums::CaptureMethod::Automatic) | None
             )),
             payment_solution: solution.map(String::from),
-            commerce_indicator: three_ds_data
-                .indicator
-                .to_owned()
-                .unwrap_or(String::from("internet")),
+            commerce_indicator: Some(
+                three_ds_data
+                    .indicator
+                    .to_owned()
+                    .unwrap_or(String::from("internet")),
+            ),
         }
     }
 }
@@ -586,8 +588,14 @@ impl
         let email = item.router_data.request.get_email()?;
         let bill_to = build_bill_to(item.router_data.get_billing()?, email)?;
         let order_information = OrderInformationWithBill::from((item, bill_to));
-        let processing_information =
-            ProcessingInformation::from((item, Some(PaymentSolution::ApplePay)));
+        let processing_information = ProcessingInformation {
+            capture: Some(matches!(
+                item.router_data.request.capture_method,
+                Some(enums::CaptureMethod::Automatic) | None
+            )),
+            payment_solution: Some("001".to_string()),
+            commerce_indicator: apple_pay_data.payment_data.eci_indicator.clone(),
+        };
         let client_reference_information = ClientReferenceInformation::from(item);
         let expiration_month = apple_pay_data.get_expiry_month()?;
         let expiration_year = apple_pay_data.get_four_digit_expiry_year()?;
