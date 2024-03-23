@@ -1,4 +1,4 @@
-FROM rust:bookworm as builder
+FROM rust:bookworm@sha256:00e330d2e2cdada2b75e9517c8359df208b3c880c5e34cb802c120083d50af35 as builder
 
 ARG EXTRA_FEATURES=""
 
@@ -36,7 +36,7 @@ RUN cargo build --release --features release ${EXTRA_FEATURES}
 
 
 
-FROM debian:bookworm
+FROM debian:bookworm@sha256:e97ee92bf1e11a2de654e9f3da827d8dce32b54e0490ac83bfc65c8706568116
 
 # Placing config and binary executable in different directories
 ARG CONFIG_DIR=/local/config

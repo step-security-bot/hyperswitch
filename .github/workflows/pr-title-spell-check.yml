@@ -7,13 +7,21 @@ on:
       - edited
       - synchronize
 
+permissions:
+  contents: read
+
 jobs:
   typos:
     name: Spell check PR title
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Store PR title in a file
         shell: bash
@@ -22,6 +30,6 @@ jobs:
         run: echo $TITLE > pr_title.txt
 
       - name: Spell check
-        uses: crate-ci/typos@master
+        uses: crate-ci/typos@6233184298a40671ccdd63744fce6209c38df06d # master
         with:
           files: ./pr_title.txt
