@@ -41,17 +41,22 @@ jobs:
     name: Check formatting
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Generate a token
         if: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
         id: generate_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c # v1.9.0
         with:
           app-id: ${{ secrets.HYPERSWITCH_BOT_APP_ID }}
           private-key: ${{ secrets.HYPERSWITCH_BOT_APP_PRIVATE_KEY }}
 
       - name: Checkout repository with token
         if: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
@@ -59,10 +64,10 @@ jobs:
 
       - name: Checkout repository for fork
         if: ${{ github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248 # master
         with:
           toolchain: nightly
           components: rustfmt
@@ -98,15 +103,20 @@ jobs:
         # - windows-latest
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: "Fetch base branch"
         shell: bash
         run: git fetch origin $GITHUB_BASE_REF --depth 1
 
       - name: Install mold linker
-        uses: rui314/setup-mold@v1
+        uses: rui314/setup-mold@6bebc01caac32fb5251ee64f60cea0322d0e6574 # v1
         if: ${{ runner.os == 'Linux' }}
         with:
           make-default: true
@@ -118,16 +128,16 @@ jobs:
           echo "rust_version=${rust_version}" >> $GITHUB_ENV
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248 # master
         with:
           toolchain: "${{ env.rust_version }}"
 
-      - uses: Swatinem/rust-cache@v2.7.0
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2.7.0
         with:
           save-if: false
 
       - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2.2.0
+        uses: baptiste0928/cargo-install@21a18ba3bf4a184d1804e8b759930d3471b1c941 # v2.2.0
         with:
           crate: cargo-hack
 
@@ -197,7 +207,7 @@ jobs:
 
   #   steps:
   #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+  #       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
   #     - name: Run cargo-deny
   #       uses: EmbarkStudios/cargo-deny-action@v1.3.2
@@ -216,21 +226,26 @@ jobs:
         # - windows-latest
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Generate a token
         if: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
         id: generate_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c # v1.9.0
         with:
           app-id: ${{ secrets.HYPERSWITCH_BOT_APP_ID }}
           private-key: ${{ secrets.HYPERSWITCH_BOT_APP_PRIVATE_KEY }}
 
       - name: Checkout repository for fork
         if: ${{ (github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name) }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Checkout repository with token
         if: ${{ (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
@@ -241,28 +256,28 @@ jobs:
         run: git fetch origin $GITHUB_BASE_REF --depth 1
 
       - name: Install mold linker
-        uses: rui314/setup-mold@v1
+        uses: rui314/setup-mold@6bebc01caac32fb5251ee64f60cea0322d0e6574 # v1
         if: ${{ runner.os == 'Linux' }}
         with:
           make-default: true
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248 # master
         with:
           toolchain: stable 2 weeks ago
           components: clippy
 
       - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2.2.0
+        uses: baptiste0928/cargo-install@21a18ba3bf4a184d1804e8b759930d3471b1c941 # v2.2.0
         with:
           crate: cargo-hack
 
       # - name: Install cargo-nextest
-      #   uses: baptiste0928/cargo-install@v2.2.0
+      #   uses: baptiste0928/cargo-install@21a18ba3bf4a184d1804e8b759930d3471b1c941 # v2.2.0
       #   with:
       #     crate: cargo-nextest
 
-      - uses: Swatinem/rust-cache@v2.7.0
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2.7.0
         with:
           save-if: false
 
@@ -344,8 +359,13 @@ jobs:
     name: Spell check
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Spell check
-        uses: crate-ci/typos@master
+        uses: crate-ci/typos@6233184298a40671ccdd63744fce6209c38df06d # master

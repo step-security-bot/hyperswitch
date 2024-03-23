@@ -73,6 +73,11 @@ jobs:
           - adyen_uk,shift4,worldline,multisafepay,paypal,mollie,nexinets
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Ignore Tests incase of merge group or pull request from external repository
         if: (github.event_name == 'merge_group') || (github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name)
         shell: bash
@@ -82,7 +87,7 @@ jobs:
 
       - name: Checkout repository
         if: ${{ (github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Download Encrypted TOML from S3 and Decrypt
         if: ${{ (github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
@@ -117,15 +122,15 @@ jobs:
 
       - name: Install latest compiler
         if: ${{ (github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
         with:
           toolchain: stable
 
       - name: Build and Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2.7.0
+        uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2.7.0
 
       - name: Install Diesel CLI with Postgres Support
-        uses: baptiste0928/cargo-install@v2.2.0
+        uses: baptiste0928/cargo-install@21a18ba3bf4a184d1804e8b759930d3471b1c941 # v2.2.0
         if: ${{ (github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
         with:
           crate: diesel_cli

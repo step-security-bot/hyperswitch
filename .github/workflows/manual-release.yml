@@ -12,23 +12,31 @@ on:
           - sandbox
           - production
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_PASSWD }}
 
       - name: Build and push router Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           build-args: |
             RUN_ENV=${{ inputs.environment }}
@@ -39,7 +47,7 @@ jobs:
           tags: juspaydotin/orca:${{ github.sha }}
 
       - name: Build and push consumer Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           build-args: |
             RUN_ENV=${{ inputs.environment }}
@@ -50,7 +58,7 @@ jobs:
           tags: juspaydotin/orca-consumer:${{ github.sha }}
 
       - name: Build and push producer Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           build-args: |
             RUN_ENV=${{ inputs.environment }}
@@ -61,7 +69,7 @@ jobs:
           tags: juspaydotin/orca-producer:${{ github.sha }}
 
       - name: Build and push drainer Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           build-args: |
             RUN_ENV=${{ inputs.environment }}
